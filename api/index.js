@@ -1,6 +1,7 @@
 const express = require('express');
 const { redis } = require('../lib/redis');
 const messages = require('../lib/messages');
+const { getShopItems } = require('../lib/shop');
 const fs = require('fs');
 const path = require('path');
 
@@ -14,6 +15,8 @@ const COOLDOWN_SECONDS = parseInt(process.env.COOLDOWN_SECONDS || '20', 10); // 
 const POINTS_PER_HIT = parseInt(process.env.POINTS_PER_HIT || '10', 10);
 const POINTS_PER_MISS = parseInt(process.env.POINTS_PER_MISS || '2', 10);    // points de consolation (0 pour désactiver)
 const TOP_DEFAULT_LIMIT = parseInt(process.env.TOP_DEFAULT_LIMIT || '3', 10); // top3 par défaut dans le tchat
+const TRIGGERFYRE_ENABLED = (process.env.TRIGGERFYRE_ENABLED || 'true').toLowerCase() !== 'false';
+const TRIGGERFYRE_PREFIX = process.env.TRIGGERFYRE_PREFIX || 'fyre_'; // le nom de commande TriggerFyre sera !fyre_<id>
 
 function clean(name) {
   return (name || '').toString().trim().toLowerCase().replace(/^@/, '');
@@ -215,6 +218,234 @@ app.get('/api/topbanane', async (req, res) => {
     results.push(render(messages.topEntry, { medal, user: displayName, points: score || 0 }));
   }
   return res.send(messages.topPrefix + results.join(' | '));
+});
+
+// ==========================================================================
+// BOUTIQUE (points dépensables contre des défis, définis dans le Google Sheet)
+// ==========================================================================
+
+// ---- !banane_buy <id> [@cible optionnelle] ----
+app.get('/api/buy', async (req, res) => {
+  const userLower = clean(req.query.user);
+  const userDisplay = req.query.user || userLower;
+  const itemId = (req.query.id || '').toString().trim().toLowerCase();
+  const targetDisplay = req.query.target || '';
+
+  if (!userLower || !itemId) {
+    return res.send('Utilisation : !banane_buy <id_recompense> [@cible]');
+  }
+
+  let items;
+  try {
+    items = await getShopItems(redis);
+  } catch (e) {
+    return res.send('🍌 La boutique est momentanément indisponible, réessaie dans une minute.');
+  }
+
+  const item = items.find((it) => it.id.toLowerCase() === itemId && it.actif);
+  if (!item) {
+    return res.send(`🍌 Récompense "${req.query.id}" introuvable ou indisponible. Liste complète sur /boutique.`);
+  }
+
+  await ensureUser(userLower, userDisplay);
+
+  const stats = (await redis.hgetall(`stats:${userLower}`)) || {};
+  const points = parseInt(stats.points || 0, 10);
+
+  if (points < item.prix) {
+    return res.send(
+      `🍌 ${userDisplay}, il te manque ${item.prix - points} Points Banane pour "${item.nom}" (${item.prix} pts, tu en as ${points}).`
+    );
+  }
+
+  // Cooldown propre à CETTE récompense (évite le spam du même effet en boucle)
+  const itemCooldownKey = `shopcooldown:${item.id}`;
+  if (item.cooldownMinutes > 0) {
+    const onCooldown = await redis.get(itemCooldownKey);
+    if (onCooldown) {
+      const ttl = await redis.ttl(itemCooldownKey);
+      const ttlDisplay = ttl > 0 ? ttl : item.cooldownMinutes * 60;
+      return res.send(`🍌 "${item.nom}" vient d'être utilisé, réessaie dans ${Math.ceil(ttlDisplay / 60)} min.`);
+    }
+  }
+
+  // Débit des points (portefeuille + classement, cohérents entre eux)
+  await redis.hincrby(`stats:${userLower}`, 'points', -item.prix);
+  await redis.zincrby('leaderboard', -item.prix, userLower);
+
+  if (item.cooldownMinutes > 0) {
+    await redis.set(itemCooldownKey, '1', { ex: item.cooldownMinutes * 60 });
+  }
+
+  // Alerte mise en file d'attente pour l'overlay (voir /alerts)
+  const alertPayload = {
+    id: item.id,
+    nom: item.nom,
+    description: item.description,
+    categorie: item.categorie,
+    prix: item.prix,
+    buyer: userDisplay,
+    target: targetDisplay || null,
+    timestamp: Date.now(),
+  };
+  await redis.rpush('alerts:queue', JSON.stringify(alertPayload));
+  await redis.ltrim('alerts:queue', -20, -1); // jamais plus de 20 alertes en attente
+
+  const remaining = points - item.prix;
+  const triggerCmd = TRIGGERFYRE_ENABLED ? `!${TRIGGERFYRE_PREFIX}${item.id} ` : '';
+  return res.send(
+    `${triggerCmd}🍌 ${userDisplay} a débloqué "${item.nom}" pour ${item.prix} pts ! (${remaining} pts restants) → à activer en live !`
+  );
+});
+
+// ---- !banane_shop : pointe vers la page /boutique ----
+app.get('/api/shop', async (req, res) => {
+  let items;
+  try {
+    items = await getShopItems(redis);
+  } catch (e) {
+    return res.send('🍌 La boutique est momentanément indisponible.');
+  }
+  const activeCount = items.filter((i) => i.actif).length;
+  const host = `${req.protocol}://${req.get('host')}`;
+  return res.send(
+    `🍌 Boutique Banane : ${activeCount} défis disponibles. Utilise !banane_buy <id> pour en débloquer un. Liste complète : ${host}/boutique`
+  );
+});
+
+// ---- Page HTML stylée de la boutique, template modifiable dans public/boutique.html ----
+app.get('/boutique', async (req, res) => {
+  let items = [];
+  let errorMsg = null;
+  try {
+    items = (await getShopItems(redis)).filter((i) => i.actif);
+  } catch (e) {
+    errorMsg = e.message;
+  }
+
+  const byCategory = {};
+  for (const item of items) {
+    const cat = item.categorie || 'Autre';
+    byCategory[cat] = byCategory[cat] || [];
+    byCategory[cat].push(item);
+  }
+
+  const contentHtml = errorMsg
+    ? `<div class="empty">Erreur de chargement de la boutique : ${escapeHtml(errorMsg)}</div>`
+    : items.length
+    ? Object.entries(byCategory)
+        .map(([cat, catItems]) => {
+          const cardsHtml = catItems
+            .sort((a, b) => a.prix - b.prix)
+            .map(
+              (it) => `
+              <div class="reward-card">
+                <div class="reward-header">
+                  <span class="reward-name">${escapeHtml(it.nom)}</span>
+                  <span class="reward-price">${it.prix} pts</span>
+                </div>
+                <p class="reward-desc">${escapeHtml(it.description)}</p>
+                <div class="reward-footer">
+                  <code class="reward-id">${escapeHtml(it.id)}</code>
+                  ${it.cooldownMinutes > 0 ? `<span class="reward-cooldown">⏱ ${it.cooldownMinutes} min</span>` : ''}
+                </div>
+              </div>`
+            )
+            .join('');
+          return `
+          <section class="category-block">
+            <h2>${escapeHtml(cat)}</h2>
+            <div class="rewards-grid">${cardsHtml}</div>
+          </section>`;
+        })
+        .join('')
+    : `<div class="empty">Aucune récompense disponible pour le moment.</div>`;
+
+  try {
+    const templatePath = path.join(process.cwd(), 'public', 'boutique.html');
+    let html = fs.readFileSync(templatePath, 'utf8');
+    html = html.replace('{{COUNT}}', items.length).replace('{{CONTENT}}', contentHtml);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.send(html);
+  } catch (err) {
+    console.error('Erreur lecture template boutique.html:', err);
+    return res.status(500).send('Erreur lors du chargement de la boutique.');
+  }
+});
+
+// ---- File d'attente d'alertes (consommée par la page /alerts) ----
+app.get('/api/alerts/pop', async (req, res) => {
+  const raw = await redis.lpop('alerts:queue');
+  if (!raw) return res.json(null);
+  try {
+    return res.json(JSON.parse(raw));
+  } catch (e) {
+    return res.json(null);
+  }
+});
+
+// ---- Page d'overlay à ajouter en Browser Source (OBS / Streamlabs) ----
+app.get('/alerts', (req, res) => {
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Alertes Banane</title>
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; }
+  #alert-card {
+    position: fixed; top: 40px; left: 50%;
+    transform: translateX(-50%) translateY(-160%);
+    background: linear-gradient(135deg, #f0c419, #f7dc6f);
+    color: #1a1a1a; padding: 20px 32px; border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    min-width: 380px; max-width: 560px; text-align: center;
+    transition: transform 0.5s cubic-bezier(.17,.67,.35,1.34);
+  }
+  #alert-card.show { transform: translateX(-50%) translateY(0); }
+  #alert-card .emoji { font-size: 2.2rem; }
+  #alert-card .title { font-size: 1.3rem; font-weight: 800; margin: 6px 0 2px; }
+  #alert-card .desc { font-size: 0.95rem; opacity: 0.85; margin-bottom: 8px; }
+  #alert-card .meta { font-size: 0.85rem; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div id="alert-card">
+    <div class="emoji">🍌</div>
+    <div class="title" id="alert-title"></div>
+    <div class="desc" id="alert-desc"></div>
+    <div class="meta" id="alert-meta"></div>
+  </div>
+  <script>
+    const card = document.getElementById('alert-card');
+    const titleEl = document.getElementById('alert-title');
+    const descEl = document.getElementById('alert-desc');
+    const metaEl = document.getElementById('alert-meta');
+
+    async function poll() {
+      try {
+        const res = await fetch('/api/alerts/pop');
+        const data = await res.json();
+        if (data) {
+          titleEl.textContent = data.nom;
+          descEl.textContent = data.description;
+          metaEl.textContent = data.target
+            ? ('Acheté par ' + data.buyer + ' — visant ' + data.target + ' (' + data.prix + ' pts)')
+            : ('Acheté par ' + data.buyer + ' (' + data.prix + ' pts)');
+          card.classList.add('show');
+          setTimeout(function () { card.classList.remove('show'); }, 6000);
+          setTimeout(poll, 7000);
+          return;
+        }
+      } catch (e) {}
+      setTimeout(poll, 3000);
+    }
+    poll();
+  </script>
+</body>
+</html>`;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  return res.send(html);
 });
 
 // ---- Données brutes du classement (réutilisées par /api/leaderboard et /classement) ----
