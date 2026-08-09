@@ -152,7 +152,7 @@ app.get('/api/banane', async (req, res) => {
   }
 });
 
-// ---- !bananestats [ou] !bananecible @pseudo ----
+// ---- !banane_stat [ou] !bananecible @pseudo ----
 app.get('/api/bananestats', async (req, res) => {
   const user = clean(req.query.user);
   const target = clean(req.query.target);
@@ -189,7 +189,7 @@ app.get('/api/bananestats', async (req, res) => {
   );
 });
 
-// ---- !bananepoints (ou !bananepoints @pseudo) ----
+// ---- !banane_points (ou !bananepoints @pseudo) ----
 app.get('/api/bananepoints', async (req, res) => {
   const user = clean(req.query.user);
   const userDisplay = req.query.user || user;
@@ -201,7 +201,7 @@ app.get('/api/bananepoints', async (req, res) => {
   return res.send(render(messages.points, { user: userDisplay, points, plural: points > 1 ? 's' : '' }));
 });
 
-// ---- !topbanane (top 3 par défaut dans le tchat) ----
+// ---- !banane_top (top 3 par défaut dans le tchat) ----
 app.get('/api/topbanane', async (req, res) => {
   const limit = parseInt(req.query.limit, 10) || TOP_DEFAULT_LIMIT;
   const members = await redis.zrange('leaderboard', 0, limit - 1, { rev: true });
@@ -277,27 +277,6 @@ app.get('/api/buy', async (req, res) => {
     await redis.set(itemCooldownKey, '1', { ex: item.cooldownMinutes * 60 });
   }
 
-  // Alerte mise en file d'attente pour l'overlay (voir /alerts)
-  const alertPayload = {
-    id: item.id,
-    nom: item.nom,
-    description: item.description,
-    categorie: item.categorie,
-    prix: item.prix,
-    buyer: userDisplay,
-    target: targetDisplay || null,
-    timestamp: Date.now(),
-  };
-  await redis.rpush('alerts:queue', JSON.stringify(alertPayload));
-  await redis.ltrim('alerts:queue', -20, -1); // jamais plus de 20 alertes en attente
-
-  const remaining = points - item.prix;
-  const triggerCmd = TRIGGERFYRE_ENABLED ? `!${TRIGGERFYRE_PREFIX}${item.id} ` : '';
-  return res.send(
-    `${triggerCmd}🍌 ${userDisplay} a débloqué "${item.nom}" pour ${item.prix} pts ! (${remaining} pts restants) → à activer en live !`
-  );
-});
-
 // ---- !banane_shop : pointe vers la page /boutique ----
 app.get('/api/shop', async (req, res) => {
   let items;
@@ -371,81 +350,6 @@ app.get('/boutique', async (req, res) => {
     console.error('Erreur lecture template boutique.html:', err);
     return res.status(500).send('Erreur lors du chargement de la boutique.');
   }
-});
-
-// ---- File d'attente d'alertes (consommée par la page /alerts) ----
-app.get('/api/alerts/pop', async (req, res) => {
-  const raw = await redis.lpop('alerts:queue');
-  if (!raw) return res.json(null);
-  try {
-    return res.json(JSON.parse(raw));
-  } catch (e) {
-    return res.json(null);
-  }
-});
-
-// ---- Page d'overlay à ajouter en Browser Source (OBS / Streamlabs) ----
-app.get('/alerts', (req, res) => {
-  const html = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<title>Alertes Banane</title>
-<style>
-  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; }
-  #alert-card {
-    position: fixed; top: 40px; left: 50%;
-    transform: translateX(-50%) translateY(-160%);
-    background: linear-gradient(135deg, #f0c419, #f7dc6f);
-    color: #1a1a1a; padding: 20px 32px; border-radius: 16px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-    min-width: 380px; max-width: 560px; text-align: center;
-    transition: transform 0.5s cubic-bezier(.17,.67,.35,1.34);
-  }
-  #alert-card.show { transform: translateX(-50%) translateY(0); }
-  #alert-card .emoji { font-size: 2.2rem; }
-  #alert-card .title { font-size: 1.3rem; font-weight: 800; margin: 6px 0 2px; }
-  #alert-card .desc { font-size: 0.95rem; opacity: 0.85; margin-bottom: 8px; }
-  #alert-card .meta { font-size: 0.85rem; font-weight: 600; }
-</style>
-</head>
-<body>
-  <div id="alert-card">
-    <div class="emoji">🍌</div>
-    <div class="title" id="alert-title"></div>
-    <div class="desc" id="alert-desc"></div>
-    <div class="meta" id="alert-meta"></div>
-  </div>
-  <script>
-    const card = document.getElementById('alert-card');
-    const titleEl = document.getElementById('alert-title');
-    const descEl = document.getElementById('alert-desc');
-    const metaEl = document.getElementById('alert-meta');
-
-    async function poll() {
-      try {
-        const res = await fetch('/api/alerts/pop');
-        const data = await res.json();
-        if (data) {
-          titleEl.textContent = data.nom;
-          descEl.textContent = data.description;
-          metaEl.textContent = data.target
-            ? ('Acheté par ' + data.buyer + ' — visant ' + data.target + ' (' + data.prix + ' pts)')
-            : ('Acheté par ' + data.buyer + ' (' + data.prix + ' pts)');
-          card.classList.add('show');
-          setTimeout(function () { card.classList.remove('show'); }, 6000);
-          setTimeout(poll, 7000);
-          return;
-        }
-      } catch (e) {}
-      setTimeout(poll, 3000);
-    }
-    poll();
-  </script>
-</body>
-</html>`;
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  return res.send(html);
 });
 
 // ---- Données brutes du classement (réutilisées par /api/leaderboard et /classement) ----
