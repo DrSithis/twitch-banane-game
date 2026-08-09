@@ -226,7 +226,7 @@ app.get('/api/banane-add', async (req, res) => {
   // 1. VÉRIFICATION DES PERMISSIONS (DrSithis ou Modérateur uniquement)
   const isStreamer = user && user.toLowerCase() === 'drsithis';
 
-  if (!isStreamer && !isModerator) {
+  if (!isStreamer) {
     return res.send(`⛔ Seul DrSithis peut donner des bananes !`);
   }
 
