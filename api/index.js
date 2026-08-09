@@ -219,6 +219,35 @@ app.get('/api/topbanane', async (req, res) => {
   }
   return res.send(messages.topPrefix + results.join(' | '));
 });
+// Commande pour ajout ou retirer des pts //
+app.get('/api/banane-add', async (req, res) => {
+  const { user, target, amount, isMod } = req.query;
+
+  // 1. VÉRIFICATION DES PERMISSIONS (DrSithis ou Modérateur uniquement)
+  const isStreamer = user && user.toLowerCase() === 'drsithis';
+
+  if (!isStreamer && !isModerator) {
+    return res.send(`⛔ Seul DrSithis peut donner des bananes !`);
+  }
+
+  // 2. VÉRIFICATION DES ARGUMENTS
+  if (!target || !amount) {
+    return res.send(`⚠️ Usage : !banane_add @pseudo <nombre> (ex: !banane_add @joueur 50)`);
+  }
+
+  const cleanTarget = target.replace('@', '').toLowerCase();
+  const pointsToAdd = parseInt(amount, 10);
+
+  if (isNaN(pointsToAdd)) {
+    return res.send(`⚠️ Le montant doit être un nombre valide.`);
+  }
+
+  // 3. AJOUT DES POINTS DANS REDIS
+  // zincrby ajoute (ou enlève si négatif) le montant au score du joueur
+  const newScore = await redis.zincrby('banane:leaderboard', pointsToAdd, cleanTarget);
+
+  return res.send(`🍌 @${user} a donné ${pointsToAdd} points à @${cleanTarget} ! (Nouveau solde : ${newScore} pts)`);
+});
 
 // ==========================================================================
 // BOUTIQUE (points dépensables contre des défis, définis dans le Google Sheet)
