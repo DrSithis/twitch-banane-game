@@ -285,7 +285,6 @@ app.get('/classement', async (req, res) => {
 
     // 3. Remplacement des variables dans le HTML
     html = html
-      .replace(/{{REFRESH}}/g, refresh)
       .replace('{{COUNT}}', rows.length)
       .replace('{{CONTENT}}', tableContent);
 
