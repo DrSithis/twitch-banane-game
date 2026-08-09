@@ -1,0 +1,13 @@
+{
+  "name": "twitch-banane-game",
+  "version": "1.0.0",
+  "description": "API de mini-jeu !banane pour Twitch, hébergée sur Vercel, connectée à StreamElements",
+  "main": "api/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "@upstash/redis": "^1.34.0"
+  }
+}
