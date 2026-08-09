@@ -1,6 +1,8 @@
 const express = require('express');
 const { redis } = require('../lib/redis');
 const messages = require('../lib/messages');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 
@@ -247,10 +249,11 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 app.get('/classement', async (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+  const limit = parseInt(req.query.limit, 10) || 500;
   const refresh = Math.max(parseInt(req.query.refresh, 10) || 30, 5);
   const rows = await getLeaderboardData(limit);
 
+  // 1. Génération des lignes du tableau
   const rowsHtml = rows
     .map((r, i) => {
       const rankIcon = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
@@ -258,7 +261,7 @@ app.get('/classement', async (req, res) => {
         <tr>
           <td class="rank">${rankIcon}</td>
           <td class="name">${escapeHtml(r.username)}</td>
-          <td>${r.points}</td>
+          <td class="points">${r.points} pts</td>
           <td>${r.throws}</td>
           <td>${r.hits}</td>
           <td>${r.accuracy}%</td>
@@ -266,52 +269,32 @@ app.get('/classement', async (req, res) => {
     })
     .join('');
 
-  const html = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta http-equiv="refresh" content="${refresh}">
-<title>Classement Banane 🍌</title>
-<style>
-  body {
-    background: #0e0e10;
-    color: #efeff1;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    margin: 0;
-    padding: 40px 20px;
-  }
-  h1 { text-align: center; font-size: 2rem; margin-bottom: 6px; }
-  .subtitle { text-align: center; color: #adadb8; margin-bottom: 30px; font-size: 0.9rem; }
-  table {
-    width: 100%; max-width: 720px; margin: 0 auto; border-collapse: collapse;
-    background: #18181b; border-radius: 10px; overflow: hidden;
-  }
-  th, td { padding: 12px 16px; text-align: left; }
-  th { background: #26262c; color: #f0c419; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
-  tr:nth-child(even) { background: #1f1f23; }
-  td.rank { font-size: 1.2rem; width: 50px; }
-  td.name { font-weight: 600; }
-  .empty { text-align: center; color: #adadb8; padding: 40px; }
-</style>
-</head>
-<body>
-  <h1>🍌 Classement Banane</h1>
-  <div class="subtitle">Top ${limit} lanceurs — actualisé toutes les ${refresh}s</div>
-  ${
-    rows.length
-      ? `<table>
-          <thead>
-            <tr><th>#</th><th>Pseudo</th><th>Points</th><th>Lancers</th><th>Réussites</th><th>Précision</th></tr>
-          </thead>
-          <tbody>${rowsHtml}</tbody>
-        </table>`
-      : `<div class="empty">Aucun lancer de banane enregistré pour le moment.</div>`
-  }
-</body>
-</html>`;
+  const tableContent = rows.length
+    ? `<table>
+        <thead>
+          <tr><th>#</th><th>Joueur</th><th>Points</th><th>Lancers</th><th>Réussites</th><th>Précision</th></tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>`
+    : `<div class="empty">Aucun lancer de banane enregistré pour le moment.</div>`;
 
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  return res.send(html);
+  // 2. Lecture du fichier HTML externe
+  try {
+    const templatePath = path.join(process.cwd(), 'public', 'classement.html');
+    let html = fs.readFileSync(templatePath, 'utf8');
+
+    // 3. Remplacement des variables dans le HTML
+    html = html
+      .replace(/{{REFRESH}}/g, refresh)
+      .replace('{{COUNT}}', rows.length)
+      .replace('{{CONTENT}}', tableContent);
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.send(html);
+  } catch (err) {
+    console.error('Erreur lecture template HTML:', err);
+    return res.status(500).send('Erreur lors du chargement de la page.');
+  }
 });
 
 function escapeHtml(str) {

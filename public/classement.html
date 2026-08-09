@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="{{REFRESH}}">
+  <title>Classement Banane 🍌</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: #0e0e10;
+      color: #efeff1;
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    h1 { text-align: center; font-size: 2.2rem; margin-bottom: 6px; color: #ffe135; }
+    .subtitle { text-align: center; color: #adadb8; margin-bottom: 30px; font-size: 0.95rem; }
+    table {
+      width: 100%; max-width: 900px; margin: 0 auto; border-collapse: collapse;
+      background: #18181b; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #26262c;
+    }
+    th, td { padding: 14px 18px; text-align: left; }
+    th { background: #1f1f23; color: #ffe135; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    tr { border-bottom: 1px solid #26262c; }
+    tr:last-child { border-bottom: none; }
+    tr:hover { background: #26262c; }
+    td.rank { font-size: 1.1rem; font-weight: bold; width: 60px; color: #ffe135; }
+    td.name { font-weight: 600; color: #fff; }
+    td.points { font-weight: bold; color: #a970ff; }
+    .empty { text-align: center; color: #adadb8; padding: 40px; }
+  </style>
+</head>
+<body>
+  <h1>🍌 Classement Général Banane</h1>
+  <div class="subtitle">Top {{COUNT}} lanceurs — Actualisé toutes les {{REFRESH}}s</div>
+  {{CONTENT}}
+</body>
+</html>
