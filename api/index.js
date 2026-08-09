@@ -12,7 +12,7 @@ const CHANCE_MAX = parseInt(process.env.CHANCE_MAX || '80', 10);             // 
 const WATCHTIME_BONUS_PER_HOUR = parseFloat(process.env.WATCHTIME_BONUS_PER_HOUR || '1.5'); // % gagné par heure de présence
 const COOLDOWN_SECONDS = parseInt(process.env.COOLDOWN_SECONDS || '20', 10); // anti-spam
 const POINTS_PER_HIT = parseInt(process.env.POINTS_PER_HIT || '10', 10);
-const POINTS_PER_MISS = parseInt(process.env.POINTS_PER_MISS || '3', 10);    // points de consolation (0 pour désactiver)
+const POINTS_PER_MISS = parseInt(process.env.POINTS_PER_MISS || '2', 10);    // points de consolation (0 pour désactiver)
 const TOP_DEFAULT_LIMIT = parseInt(process.env.TOP_DEFAULT_LIMIT || '3', 10); // top3 par défaut dans le tchat
 
 function clean(name) {
