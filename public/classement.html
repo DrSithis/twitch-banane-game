@@ -3,22 +3,88 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="refresh" content="{{REFRESH}}">
-  <title>Classement Banane 🍌</title>
+  <title>🍌 Classement Jeu Banane 🍌</title>
   <style>
     * { box-sizing: border-box; }
     body {
       background: #0e0e10;
       color: #efeff1;
-      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+      font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
-      padding: 40px 20px;
+      padding: 30px 20px;
     }
-    h1 { text-align: center; font-size: 2.2rem; margin-bottom: 6px; color: #ffe135; }
-    .subtitle { text-align: center; color: #adadb8; margin-bottom: 30px; font-size: 0.95rem; }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    /* Header & Logo */
+    .header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+    .logo {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 3px solid #ffe135;
+      object-fit: cover;
+      margin-bottom: 12px;
+      box-shadow: 0 0 20px rgba(255, 225, 53, 0.25);
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin: 5px 0;
+      color: #ffe135;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      color: #adadb8;
+      font-size: 0.95rem;
+      margin-bottom: 20px;
+    }
+
+    /* Barre des Réseaux Sociaux */
+    .social-links {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+    .btn-social {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-decoration: none;
+      color: #fff;
+      transition: transform 0.2s, opacity 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .btn-social:hover {
+      transform: translateY(-2px);
+      opacity: 0.9;
+    }
+    .btn-twitch { background-color: #9146FF; }
+    .btn-discord { background-color: #5865F2; }
+    .btn-tiktok { background-color: #000000; border: 1px solid #333; }
+    .btn-youtube { background-color: #FF0000; }
+    .btn-youtube-rediff { background-color: #CC0000; }
+
+    /* Tableau */
     table {
-      width: 100%; max-width: 900px; margin: 0 auto; border-collapse: collapse;
-      background: #18181b; border-radius: 12px; overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 1px solid #26262c;
+      width: 100%;
+      border-collapse: collapse;
+      background: #18181b;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      border: 1px solid #26262c;
     }
     th, td { padding: 14px 18px; text-align: left; }
     th { background: #1f1f23; color: #ffe135; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -32,8 +98,28 @@
   </style>
 </head>
 <body>
-  <h1>🍌 Classement Général Banane</h1>
-  <div class="subtitle">Top {{COUNT}} lanceurs — Actualisé toutes les {{REFRESH}}s</div>
-  {{CONTENT}}
+
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <!-- Si ton fichier image s'appelle logo.png dans public/ -->
+      <img src="/logo.png" alt="DrSithis Logo" class="logo" onerror="this.style.display='none'">
+      <h1>🍌 Classement Banane</h1>
+      <div class="subtitle">Top {{COUNT}} lanceurs — Actualisé toutes les {{REFRESH}}s</div>
+
+      <!-- Réseaux Sociaux -->
+      <div class="social-links">
+        <a href="https://www.twitch.tv/drsithis" target="_blank" class="btn-social btn-twitch">👾 Twitch</a>
+        <a href="https://discord.com/invite/6rWMXX2g" target="_blank" class="btn-social btn-discord">💬 Discord</a>
+        <a href="https://www.tiktok.com/@drsithis" target="_blank" class="btn-social btn-tiktok">🎵 TikTok</a>
+        <a href="https://www.youtube.com/@DrSithis" target="_blank" class="btn-social btn-youtube">▶️ YouTube</a>
+        <a href="https://www.youtube.com/@DrSithisRediffusion" target="_blank" class="btn-social btn-youtube-rediff">🔴 Rediffs</a>
+      </div>
+    </div>
+
+    <!-- Tableau -->
+    {{CONTENT}}
+  </div>
+
 </body>
 </html>
