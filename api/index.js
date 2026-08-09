@@ -12,8 +12,8 @@ const CHANCE_BASE = parseInt(process.env.CHANCE_BASE || '35', 10);           // 
 const CHANCE_MAX = parseInt(process.env.CHANCE_MAX || '80', 10);             // % plafond
 const WATCHTIME_BONUS_PER_HOUR = parseFloat(process.env.WATCHTIME_BONUS_PER_HOUR || '1.5'); // % gagné par heure de présence
 const COOLDOWN_SECONDS = parseInt(process.env.COOLDOWN_SECONDS || '20', 10); // anti-spam
-const POINTS_PER_HIT = parseInt(process.env.POINTS_PER_HIT || '10', 10);
-const POINTS_PER_MISS = parseInt(process.env.POINTS_PER_MISS || '2', 10);    // points de consolation (0 pour désactiver)
+const POINTS_PER_HIT = parseInt(process.env.POINTS_PER_HIT || '5', 10);
+const POINTS_PER_MISS = parseInt(process.env.POINTS_PER_MISS || '1', 10);    // points de consolation (0 pour désactiver)
 const TOP_DEFAULT_LIMIT = parseInt(process.env.TOP_DEFAULT_LIMIT || '3', 10); // top3 par défaut dans le tchat
 const TRIGGERFYRE_ENABLED = (process.env.TRIGGERFYRE_ENABLED || 'true').toLowerCase() !== 'false';
 const TRIGGERFYRE_PREFIX = process.env.TRIGGERFYRE_PREFIX || 'fyre_'; // le nom de commande TriggerFyre sera !fyre_<id>
