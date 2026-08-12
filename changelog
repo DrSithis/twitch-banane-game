@@ -1,0 +1,32 @@
+Changelog
+
+## [0.5.0] - 2026-08-12
+### 🎲 Ajout
+	- Système de Coup Critique (4%) : Réussite critique (+5 pts) et consolation sur raté (+1 pt).
+  - Système d'Échec Critique : Probabilité de pénalité (-1 pt) lors d'un lancer raté.
+
+### ⚡ Changement & Équilibrage 
+	- Cooldown joueur : 20sec -> 45sec
+	- Cooldwon global : 0sec -> 10sec
+	- Gain passif touche réussite, base : +5pts -> +3pts
+	- Gain passif touche raté, base : 1pts -> 0pts.
+
+Réajustement Prix Boutique : 
+	- Sithis : Switch Manette/Clavier : 500pts -> 700pts
+	- ER : Téléportation Sauvage : 70pts -> 200pts
+	- ER : Arme Imposée : 90pts -> 500pts
+	- ER : Boss Sans Roulade : 200pts -> 500pts
+	- ER : Boss Sans Heal : 250pts -> 750pts
+	- ER : Mort Immédiate : 300pts -> 1000pts
+	- DBD : Choix Tueur/Survivant : 80pts -> 200pts
+	- DBD : No Perk : 150pts -> 300pts
+	- DBD : Tunnel Target : 180pts -> 250pts
+
+ ## [0.4.0]
+  - Ajustements mineurs de stabilité et corrections d'overlay.
+
+ ## [0.3.0]
+  - Lancement de la boutique de défis en ligne (`/boutique`).
+
+ ## [0.1.0]
+  - Release initiale Beta du mini-jeu Banane.
