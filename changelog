@@ -1,5 +1,10 @@
 Changelog
 
+## [0.6.0] - 2026-08-12
+### ⚡ Changement & Équilibrage 
+	- Restructuration du code.
+	- Cooldown joueur : 20sec -> 30sec
+
 ## [0.5.0] - 2026-08-12
 ### 🎲 Ajout
 	- Système de Coup Critique (4%) : Réussite critique (+5 pts) et consolation sur raté (+1 pt).
