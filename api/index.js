@@ -12,11 +12,19 @@ const CHANCE_BASE = parseInt(process.env.CHANCE_BASE || '35', 10);           // 
 const CHANCE_MAX = parseInt(process.env.CHANCE_MAX || '80', 10);             // % plafond
 const WATCHTIME_BONUS_PER_HOUR = parseFloat(process.env.WATCHTIME_BONUS_PER_HOUR || '1.5'); // % gagné par heure de présence
 const COOLDOWN_SECONDS = parseInt(process.env.COOLDOWN_SECONDS || '45', 10); // anti-spam
-const POINTS_PER_HIT = parseInt(process.env.POINTS_PER_HIT || '5', 10);
-const POINTS_PER_MISS = parseInt(process.env.POINTS_PER_MISS || '1', 10);    // points de consolation (0 pour désactiver)
 const TOP_DEFAULT_LIMIT = parseInt(process.env.TOP_DEFAULT_LIMIT || '3', 10); // top3 par défaut dans le tchat
 const TRIGGERFYRE_ENABLED = (process.env.TRIGGERFYRE_ENABLED || 'true').toLowerCase() !== 'false';
 const TRIGGERFYRE_PREFIX = process.env.TRIGGERFYRE_PREFIX || 'fyre_'; // le nom de commande TriggerFyre sera !fyre_<id>
+
+// ---- Nouvelle logique de tir : coup critique / classique / pénalité / neutre / consolation ----
+const CRIT_CHANCE = parseFloat(process.env.CRIT_CHANCE || '0.04');           // 4% de coup critique, sur CHAQUE tir
+const POINTS_CRITICAL = parseInt(process.env.POINTS_CRITICAL || '5', 10);    // pts si coup critique
+const POINTS_CLASSIC = parseInt(process.env.POINTS_CLASSIC || '3', 10);      // pts si réussite classique
+const MISS_PENALTY_CHANCE = parseFloat(process.env.MISS_PENALTY_CHANCE || '0.30');           // 30% des ratés
+const MISS_CONSOLATION_CHANCE = parseFloat(process.env.MISS_CONSOLATION_CHANCE || '0.20');   // 20% des ratés (le reste, 50%, est neutre)
+const POINTS_MISS_PENALTY = parseInt(process.env.POINTS_MISS_PENALTY || '-1', 10);
+const POINTS_MISS_CONSOLATION = parseInt(process.env.POINTS_MISS_CONSOLATION || '1', 10);
+const TROLL_TARGET = (process.env.TROLL_TARGET || 'drsithis').toLowerCase(); // cible dont le tir est forcé en échec (sauf critique)
 
 function clean(name) {
   return (name || '').toString().trim().toLowerCase().replace(/^@/, '');
@@ -106,13 +114,6 @@ app.get('/api/banane', async (req, res) => {
   }
   await redis.set(cooldownKey, '1', { ex: COOLDOWN_SECONDS });
 
-  const watchMinutes = await getWatchtimeMinutes(from);
-  const watchHours = watchMinutes / 60;
-  const bonus = Math.min(watchHours * WATCHTIME_BONUS_PER_HOUR, CHANCE_MAX - CHANCE_BASE);
-  const chance = Math.min(CHANCE_BASE + bonus, CHANCE_MAX);
-
-  const success = Math.random() * 100 < chance;
-
   const statsKey = `stats:${from}`;
   const targetedKey = `targeted:${to}`;
 
@@ -120,36 +121,64 @@ app.get('/api/banane', async (req, res) => {
   await redis.zincrby(`targets:${from}`, 1, to);
   await redis.hincrby(targetedKey, 'throws', 1);
 
-  if (success) {
-    await redis.hincrby(statsKey, 'hits', 1);
-    await redis.hincrby(statsKey, 'points', POINTS_PER_HIT);
-    await redis.hincrby(targetedKey, 'hits', 1);
-    await redis.zincrby('leaderboard', POINTS_PER_HIT, from);
-    return res.send(
-      render(pick(messages.success), {
-        from: fromDisplay,
-        to: toDisplay,
-        points: POINTS_PER_HIT,
-        chance: chance.toFixed(0),
-      })
-    );
+  // 1. Coup critique : 4% de chance sur CHAQUE tir, indépendamment de la cible.
+  //    C'est la seule façon de toucher "drsithis" hors défaillance du système Troll Streamer.
+  const isCritical = Math.random() < CRIT_CHANCE;
+  const isTrollTarget = to === TROLL_TARGET;
+
+  let success;
+  if (isCritical) {
+    success = true;
+  } else if (isTrollTarget) {
+    // Règle Troll Streamer : hors coup critique, le tir est forcé en échec.
+    // Totalement invisible pour le tchat : on retombe sur les mêmes messages qu'un raté normal.
+    success = false;
   } else {
-    if (POINTS_PER_MISS > 0) {
-      await redis.hincrby(statsKey, 'points', POINTS_PER_MISS);
-      await redis.zincrby('leaderboard', POINTS_PER_MISS, from);
-      return res.send(
-        render(pick(messages.fail), {
-          from: fromDisplay,
-          to: toDisplay,
-          points: POINTS_PER_MISS,
-          chance: chance.toFixed(0),
-        })
-      );
+    const watchMinutes = await getWatchtimeMinutes(from);
+    const watchHours = watchMinutes / 60;
+    const bonus = Math.min(watchHours * WATCHTIME_BONUS_PER_HOUR, CHANCE_MAX - CHANCE_BASE);
+    const chance = Math.min(CHANCE_BASE + bonus, CHANCE_MAX);
+    success = Math.random() * 100 < chance;
+  }
+
+  // ---- Tir réussi : critique (+5 par défaut) ou classique (+3 par défaut) ----
+  if (success) {
+    const earnedPoints = isCritical ? POINTS_CRITICAL : POINTS_CLASSIC;
+    await redis.hincrby(statsKey, 'hits', 1);
+    await redis.hincrby(statsKey, 'points', earnedPoints);
+    await redis.hincrby(targetedKey, 'hits', 1);
+    await redis.zincrby('leaderboard', earnedPoints, from);
+
+    const template = isCritical ? pick(messages.successCritical) : pick(messages.successClassic);
+    return res.send(render(template, { from: fromDisplay, to: toDisplay, points: earnedPoints }));
+  }
+
+  // ---- Tir raté (naturel ou forcé par la règle Troll Streamer) : sous-tirage pénalité / neutre / consolation ----
+  const missRoll = Math.random();
+
+  if (missRoll < MISS_PENALTY_CHANCE) {
+    // Pénalité (-1 par défaut), jamais sous 0
+    const currentStats = (await redis.hgetall(statsKey)) || {};
+    const currentPoints = parseInt(currentStats.points || 0, 10);
+    const appliedDelta = Math.max(POINTS_MISS_PENALTY, -currentPoints);
+    if (appliedDelta !== 0) {
+      await redis.hincrby(statsKey, 'points', appliedDelta);
+      await redis.zincrby('leaderboard', appliedDelta, from);
     }
+    return res.send(render(pick(messages.missPenalty), { from: fromDisplay, to: toDisplay, points: appliedDelta }));
+  }
+
+  if (missRoll < MISS_PENALTY_CHANCE + MISS_CONSOLATION_CHANCE) {
+    // Consolation (+1 par défaut)
+    await redis.hincrby(statsKey, 'points', POINTS_MISS_CONSOLATION);
+    await redis.zincrby('leaderboard', POINTS_MISS_CONSOLATION, from);
     return res.send(
-      render(pick(messages.failNoPoints), { from: fromDisplay, to: toDisplay, chance: chance.toFixed(0) })
+      render(pick(messages.missConsolation), { from: fromDisplay, to: toDisplay, points: POINTS_MISS_CONSOLATION })
     );
   }
+
+  // Neutre (0 pt, aucun appel Redis supplémentaire nécessaire)
+  return res.send(render(pick(messages.missNeutral), { from: fromDisplay, to: toDisplay }));
 });
 
 // ---- !bananestats [ou] !bananecible @pseudo ----
