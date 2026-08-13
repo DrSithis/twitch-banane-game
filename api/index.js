@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 
 const bananeRoutes = require('../routes/banane');
 const shopRoutes = require('../routes/shop');
@@ -7,6 +8,9 @@ const leaderboardRoutes = require('../routes/leaderboard');
 const alertsRoutes = require('../routes/alerts');
 
 const app = express();
+
+// ---- Fichiers statiques ----
+app.use(express.static(path.join(__dirname, '../public')));
 
 // ---- Montage des différents modules de routes ----
 app.use(bananeRoutes.router);      // /api/banane, /api/bananestats, /api/bananepoints, /api/topbanane, /api/banane-add, /api/debug-watchtime
@@ -17,6 +21,6 @@ app.use(alertsRoutes.router);      // /api/alerts/pop, /alerts
 
 // ---- Routes racine ----
 app.get('/api', (req, res) => res.send('Twitch Banane Game API — OK'));
-app.get('/', (req, res) => res.send('Twitch Banane Game API — OK. Voir /classement pour le classement en ligne.'));
+app.get('/', (req, res) => {res.sendFile(path.join(__dirname, '../public/index.html'));});
 
 module.exports = app;

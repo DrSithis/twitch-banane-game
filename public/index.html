@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twitch Banane Game - Accueil</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header & Logo -->
+    <header class="header">
+      <img src="https://github.com/DrSithis.png" alt="Logo DrSithis" class="logo">
+      <h1>🍌 Twitch Banane Game</h1>
+      <p class="subtitle">Le jeu de tout les macaques du stream ! LANCE, ACCUMULE, RÉCOMPENSE.</p>
+    </header>
+
+    <!-- Réseaux Sociaux -->
+    <div class="social-links">
+      <a href="https://www.twitch.tv/drsithis" target="_blank" class="btn-social btn-twitch">👾 Twitch</a>
+      <a href="https://discord.com/invite/6rWMXX2g" target="_blank" class="btn-social btn-discord">💬 Discord</a>
+      <a href="https://www.tiktok.com/@drsithis" target="_blank" class="btn-social btn-tiktok">🎵 TikTok</a>
+      <a href="https://www.youtube.com/@DrSithis" target="_blank" class="btn-social btn-youtube">▶️ YouTube</a>
+      <a href="https://www.youtube.com/@DrSithisRediffusion" target="_blank" class="btn-social btn-youtube-rediff">🔴 Rediffs</a>
+    </div>
+
+    <!-- Navigation principale -->
+    <nav class="nav-links">
+      <a href="/boutique" class="btn-nav">🛒 Boutique de défis</a>
+      <a href="/classement" class="btn-nav">🏆 Classement Général</a>
+    </nav>
+
+    <!-- Règle de base -->
+    <div class="instructions">
+      <p>💡 <strong>Principe :</strong> Vise un viewer ou le streamer avec des bananes pour marquer des points, débloquer des objets et grimper au classement !</p>
+    </div>
+
+    <!-- Liste complète des commandes -->
+    <div class="category-block">
+      <h2>🤖 Commandes du Tchat</h2>
+      <div class="rewards-grid">
+
+        <div class="reward-card">
+          <div class="reward-header">
+            <span class="reward-name">🍌 Lancer une banane</span>
+            <span class="reward-price">!banane</span>
+          </div>
+          <p class="reward-desc">Lance une banane sur une cible. <code>!banane &lt;pseudo&gt;</code> (ou <code>!b</code>).</p>
+        </div>
+
+      <!--  <div class="reward-card">
+          <div class="reward-header">
+            <span class="reward-name">🎒 Utiliser un objet</span>
+            <span class="reward-price">!banane_use</span>
+          </div>
+          <p class="reward-desc">Utilise un consommable de ton inventaire. <code>!banane_use &lt;id&gt; &lt;cible&gt;</code>.</p>
+        </div> -->
+
+        <div class="reward-card">
+          <div class="reward-header">
+            <span class="reward-name">🛒 Acheter un article</span>
+            <span class="reward-price">!banane_buy</span>
+          </div>
+          <p class="reward-desc">Achète un rôle ou un objet direct. <code>!banane_buy &lt;id&gt;</code>.</p>
+        </div>
+
+       <!-- <div class="reward-card">
+          <div class="reward-header">
+            <span class="reward-name">📦 Voir son inventaire</span>
+            <span class="reward-price">!banane_inventaire</span>
+          </div>
+          <p class="reward-desc">Affiche la liste des objets et consommables que tu possèdes.</p>
+        </div> -->
+
+        <div class="reward-card">
+          <div class="reward-header">
+            <span class="reward-name">💰 Solde de points</span>
+            <span class="reward-price">!banane_points</span>
+          </div>
+          <p class="reward-desc">Affiche ton total de points bananes accumulés.</p>
+        </div>
+
+        <div class="reward-card">
+          <div class="reward-header">
+            <span class="reward-name">📊 Mes Statistiques</span>
+            <span class="reward-price">!banane_stat</span>
+          </div>
+          <p class="reward-desc">Consulte ton nombre de tirs réussis, critiques et défaites.</p>
+        </div>
+
+        <div class="reward-card">
+          <div class="reward-header">
+            <span class="reward-name">👑 Le Joueur #1</span>
+            <span class="reward-price">!banane_top</span>
+          </div>
+          <p class="reward-desc">Affiche qui domine le classement actuellement.</p>
+        </div>
+
+        <div class="reward-card">
+          <div class="reward-header">
+            <span class="reward-name">🏆 Lien Classement</span>
+            <span class="reward-price">!banane_lb</span>
+          </div>
+          <p class="reward-desc">Donne le lien direct vers le classement web général.</p>
+        </div>
+
+        <div class="reward-card">
+          <div class="reward-header">
+            <span class="reward-name">🛍️ Lien Boutique</span>
+            <span class="reward-price">!banane_shop</span>
+          </div>
+          <p class="reward-desc">Donne le lien direct vers le catalogue de la boutique.</p>
+        </div>
+
+        <div class="reward-card">
+          <div class="reward-header">
+            <span class="reward-name">❓ Aide du jeu</span>
+            <span class="reward-price">!banane_help</span>
+          </div>
+          <p class="reward-desc">Affiche un résumé des règles directement dans le tchat.</p>
+        </div>
+
+        <!--<div class="reward-card">
+          <div class="reward-header">
+            <span class="reward-name">🐒 Mandater les macaques</span>
+            <span class="reward-price">!macaque</span>
+          </div>
+          <p class="reward-desc">Commande fun spéciale pour envoyer la troupe sur une cible ! <code>!macaque &lt;pseudo&gt;</code>.</p>
+        </div>-->
+
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
