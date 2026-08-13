@@ -1,5 +1,11 @@
 Changelog
 
+## [0.1.7.2] - 2026-08-13
+### 🎲 Ajout
+	- Objet triple banane & stop banane
+### ⚡ Changement 
+	- Changement comportement du lancer.
+	
 ## [0.1.7] - 2026-08-13
 ### 🎲 Ajout
 	- Systeme d'inventaire

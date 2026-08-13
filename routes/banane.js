@@ -8,6 +8,7 @@ const { redis } = require('../lib/redis');
 const messages = require('../lib/messages');
 const { clean, pick, render } = require('../lib/utils');
 const { ensureUser, getWatchtimeMinutes } = require('../lib/users');
+const { addItem, removeItem } = require('../lib/inventory');
 const {
   CHANCE_BASE,
   CHANCE_MAX,
@@ -22,11 +23,77 @@ const {
   POINTS_MISS_PENALTY,
   POINTS_MISS_CONSOLATION,
   TROLL_TARGET,
+  ITEM_ID_TRIPLE,
+  STUN_DURATION_SECONDS,
   SE_JWT_TOKEN,
   SE_CHANNEL_ID,
 } = require('../lib/config');
 
 const router = express.Router();
+
+// ==========================================================================
+// Un seul tir de banane : applique le RNG (critique / classique / pénalité /
+// consolation / neutre), met à jour les stats + le classement dans Redis, et
+// renvoie le résultat brut (sans phrase de tchat). Utilisé à la fois par le
+// tir simple et par la Banane Triple, pour garantir un comportement identique.
+// ==========================================================================
+async function resolveThrow(fromLower, toLower, watchMinutes) {
+  const statsKey = `stats:${fromLower}`;
+  const targetedKey = `targeted:${toLower}`;
+
+  await redis.hincrby(statsKey, 'throws', 1);
+  await redis.zincrby(`targets:${fromLower}`, 1, toLower);
+  await redis.hincrby(targetedKey, 'throws', 1);
+
+  // 1. Coup critique : 4% de chance sur CHAQUE tir, indépendamment de la cible.
+  const isCritical = Math.random() < CRIT_CHANCE;
+  const isTrollTarget = toLower === TROLL_TARGET;
+
+  let success;
+  if (isCritical) {
+    success = true;
+  } else if (isTrollTarget) {
+    // Règle Troll Streamer : hors coup critique, le tir est forcé en échec.
+    success = false;
+  } else {
+    const watchHours = watchMinutes / 60;
+    const bonus = Math.min(watchHours * WATCHTIME_BONUS_PER_HOUR, CHANCE_MAX - CHANCE_BASE);
+    const chance = Math.min(CHANCE_BASE + bonus, CHANCE_MAX);
+    success = Math.random() * 100 < chance;
+  }
+
+  // ---- Tir réussi : critique ou classique ----
+  if (success) {
+    const earnedPoints = isCritical ? POINTS_CRITICAL : POINTS_CLASSIC;
+    await redis.hincrby(statsKey, 'hits', 1);
+    await redis.hincrby(statsKey, 'points', earnedPoints);
+    await redis.hincrby(targetedKey, 'hits', 1);
+    await redis.zincrby('leaderboard', earnedPoints, fromLower);
+    return { type: isCritical ? 'critical' : 'hit', points: earnedPoints };
+  }
+
+  // ---- Tir raté : sous-tirage pénalité / neutre / consolation ----
+  const missRoll = Math.random();
+
+  if (missRoll < MISS_PENALTY_CHANCE) {
+    const currentStats = (await redis.hgetall(statsKey)) || {};
+    const currentPoints = parseInt(currentStats.points || 0, 10);
+    const appliedDelta = Math.max(POINTS_MISS_PENALTY, -currentPoints);
+    if (appliedDelta !== 0) {
+      await redis.hincrby(statsKey, 'points', appliedDelta);
+      await redis.zincrby('leaderboard', appliedDelta, fromLower);
+    }
+    return { type: 'penalty', points: appliedDelta };
+  }
+
+  if (missRoll < MISS_PENALTY_CHANCE + MISS_CONSOLATION_CHANCE) {
+    await redis.hincrby(statsKey, 'points', POINTS_MISS_CONSOLATION);
+    await redis.zincrby('leaderboard', POINTS_MISS_CONSOLATION, fromLower);
+    return { type: 'consolation', points: POINTS_MISS_CONSOLATION };
+  }
+
+  return { type: 'neutral', points: 0 };
+}
 
 // ---- Route de debug pour vérifier la réponse brute de StreamElements ----
 router.get('/api/debug-watchtime', async (req, res) => {
@@ -46,97 +113,164 @@ router.get('/api/debug-watchtime', async (req, res) => {
   }
 });
 
-// ---- !banane @pseudo ----
+// ---- !banane @pseudo  (ou !banane @p1 @p2 @p3 avec une Banane Triple en inventaire) ----
 router.get('/api/banane', async (req, res) => {
   const from = clean(req.query.from);
-  const to = clean(req.query.to);
   const fromDisplay = req.query.from || from;
-  const toDisplay = req.query.to || to;
 
-  if (!from || !to) {
+  // Découpe la chaîne "to" en pseudos individuels (espaces et/ou virgules).
+  const rawTargets = (req.query.to || '')
+    .toString()
+    .trim()
+    .split(/[\s,]+/)
+    .filter(Boolean);
+
+  if (!from || rawTargets.length === 0) {
     return res.send(messages.usageBanane);
   }
-  if (from === to) {
+
+  // ---- Blocage Banane Stop : le lanceur ne peut rien faire tant qu'il est stun ----
+  const stunKey = `stunted:${from}`;
+  const isStunned = await redis.get(stunKey);
+  if (isStunned) {
+    const ttl = await redis.ttl(stunKey);
+    const ttlDisplay = ttl > 0 ? ttl : STUN_DURATION_SECONDS;
+    return res.send(render(messages.stunned, { from: fromDisplay, seconds: ttlDisplay }));
+  }
+
+  // Cible unique historique : on garde le comportement/les messages inchangés.
+  if (rawTargets.length === 1) {
+    const to = clean(rawTargets[0]);
+    const toDisplay = rawTargets[0].replace(/^@/, '');
+
+    if (from === to) {
+      return res.send(render(pick(messages.selfThrow), { from: fromDisplay }));
+    }
+
+    await ensureUser(from, fromDisplay);
+    await ensureUser(to, toDisplay);
+
+    const cooldownKey = `cooldown:${from}`;
+    const onCooldown = await redis.get(cooldownKey);
+    if (onCooldown) {
+      const ttl = await redis.ttl(cooldownKey);
+      const ttlDisplay = ttl > 0 ? ttl : COOLDOWN_SECONDS;
+      return res.send(render(pick(messages.cooldown), { from: fromDisplay, seconds: ttlDisplay }));
+    }
+    await redis.set(cooldownKey, '1', { ex: COOLDOWN_SECONDS });
+
+    const watchMinutes = await getWatchtimeMinutes(from);
+    const result = await resolveThrow(from, to, watchMinutes);
+
+    if (result.type === 'critical' || result.type === 'hit') {
+      const template = result.type === 'critical' ? pick(messages.successCritical) : pick(messages.successClassic);
+      return res.send(render(template, { from: fromDisplay, to: toDisplay, points: result.points }));
+    }
+    if (result.type === 'penalty') {
+      return res.send(render(pick(messages.missPenalty), { from: fromDisplay, to: toDisplay, points: result.points }));
+    }
+    if (result.type === 'consolation') {
+      return res.send(
+        render(pick(messages.missConsolation), { from: fromDisplay, to: toDisplay, points: result.points })
+      );
+    }
+    return res.send(render(pick(messages.missNeutral), { from: fromDisplay, to: toDisplay }));
+  }
+
+  // ---- 2 ou 3 pseudos détectés : tentative de Banane Triple ----
+  // Dédoublonne et retire le lanceur lui-même de la liste des cibles.
+  const seen = new Set();
+  const targets = [];
+  for (const raw of rawTargets) {
+    const lower = clean(raw);
+    if (!lower || lower === from || seen.has(lower)) continue;
+    seen.add(lower);
+    targets.push({ lower, display: raw.replace(/^@/, '') });
+  }
+
+  if (targets.length === 0) {
     return res.send(render(pick(messages.selfThrow), { from: fromDisplay }));
   }
 
+  if (targets.length > 3) {
+    return res.send(render(messages.tripleTooMany, { from: fromDisplay }));
+  }
+
+  // Après nettoyage il ne reste qu'une seule cible réelle -> tir simple classique.
+  if (targets.length === 1) {
+    const to = targets[0].lower;
+    const toDisplay = targets[0].display;
+
+    await ensureUser(from, fromDisplay);
+    await ensureUser(to, toDisplay);
+
+    const cooldownKey = `cooldown:${from}`;
+    const onCooldown = await redis.get(cooldownKey);
+    if (onCooldown) {
+      const ttl = await redis.ttl(cooldownKey);
+      const ttlDisplay = ttl > 0 ? ttl : COOLDOWN_SECONDS;
+      return res.send(render(pick(messages.cooldown), { from: fromDisplay, seconds: ttlDisplay }));
+    }
+    await redis.set(cooldownKey, '1', { ex: COOLDOWN_SECONDS });
+
+    const watchMinutes = await getWatchtimeMinutes(from);
+    const result = await resolveThrow(from, to, watchMinutes);
+
+    if (result.type === 'critical' || result.type === 'hit') {
+      const template = result.type === 'critical' ? pick(messages.successCritical) : pick(messages.successClassic);
+      return res.send(render(template, { from: fromDisplay, to: toDisplay, points: result.points }));
+    }
+    if (result.type === 'penalty') {
+      return res.send(render(pick(messages.missPenalty), { from: fromDisplay, to: toDisplay, points: result.points }));
+    }
+    if (result.type === 'consolation') {
+      return res.send(
+        render(pick(messages.missConsolation), { from: fromDisplay, to: toDisplay, points: result.points })
+      );
+    }
+    return res.send(render(pick(messages.missNeutral), { from: fromDisplay, to: toDisplay }));
+  }
+
+  // ---- Vraie Banane Triple : 2 ou 3 cibles distinctes, il faut l'objet en inventaire ----
   await ensureUser(from, fromDisplay);
-  await ensureUser(to, toDisplay);
+  const hasItem = await removeItem(from, ITEM_ID_TRIPLE, 1);
+  if (!hasItem) {
+    return res.send(render(messages.tripleNoItem, { from: fromDisplay }));
+  }
 
   const cooldownKey = `cooldown:${from}`;
   const onCooldown = await redis.get(cooldownKey);
   if (onCooldown) {
+    // Le cooldown bloque bien avant l'achat/la conso d'objet côté utilisateur normalement,
+    // mais si jamais il est encore actif, on rend l'objet et on affiche le cooldown restant.
+    await addItem(from, ITEM_ID_TRIPLE, 1);
     const ttl = await redis.ttl(cooldownKey);
     const ttlDisplay = ttl > 0 ? ttl : COOLDOWN_SECONDS;
     return res.send(render(pick(messages.cooldown), { from: fromDisplay, seconds: ttlDisplay }));
   }
   await redis.set(cooldownKey, '1', { ex: COOLDOWN_SECONDS });
 
-  const statsKey = `stats:${from}`;
-  const targetedKey = `targeted:${to}`;
+  const watchMinutes = await getWatchtimeMinutes(from);
+  let total = 0;
+  const lines = [];
 
-  await redis.hincrby(statsKey, 'throws', 1);
-  await redis.zincrby(`targets:${from}`, 1, to);
-  await redis.hincrby(targetedKey, 'throws', 1);
+  for (const target of targets) {
+    await ensureUser(target.lower, target.display);
+    const result = await resolveThrow(from, target.lower, watchMinutes);
+    total += result.points;
 
-  // 1. Coup critique : 4% de chance sur CHAQUE tir, indépendamment de la cible.
-  //    C'est la seule façon de toucher la cible "troll" hors défaillance du système.
-  const isCritical = Math.random() < CRIT_CHANCE;
-  const isTrollTarget = to === TROLL_TARGET;
-
-  let success;
-  if (isCritical) {
-    success = true;
-  } else if (isTrollTarget) {
-    // Règle Troll Streamer : hors coup critique, le tir est forcé en échec.
-    // Totalement invisible pour le tchat : on retombe sur les mêmes messages qu'un raté normal.
-    success = false;
-  } else {
-    const watchMinutes = await getWatchtimeMinutes(from);
-    const watchHours = watchMinutes / 60;
-    const bonus = Math.min(watchHours * WATCHTIME_BONUS_PER_HOUR, CHANCE_MAX - CHANCE_BASE);
-    const chance = Math.min(CHANCE_BASE + bonus, CHANCE_MAX);
-    success = Math.random() * 100 < chance;
+    const vars = { target: target.display, points: result.points };
+    if (result.type === 'critical') lines.push(render(messages.tripleResultCritical, vars));
+    else if (result.type === 'hit') lines.push(render(messages.tripleResultHit, vars));
+    else if (result.type === 'penalty') lines.push(render(messages.tripleResultPenalty, vars));
+    else if (result.type === 'consolation') lines.push(render(messages.tripleResultConsolation, vars));
+    else lines.push(render(messages.tripleResultNeutral, vars));
   }
 
-  // ---- Tir réussi : critique ou classique ----
-  if (success) {
-    const earnedPoints = isCritical ? POINTS_CRITICAL : POINTS_CLASSIC;
-    await redis.hincrby(statsKey, 'hits', 1);
-    await redis.hincrby(statsKey, 'points', earnedPoints);
-    await redis.hincrby(targetedKey, 'hits', 1);
-    await redis.zincrby('leaderboard', earnedPoints, from);
-
-    const template = isCritical ? pick(messages.successCritical) : pick(messages.successClassic);
-    return res.send(render(template, { from: fromDisplay, to: toDisplay, points: earnedPoints }));
-  }
-
-  // ---- Tir raté (naturel ou forcé par la règle Troll Streamer) : sous-tirage pénalité / neutre / consolation ----
-  const missRoll = Math.random();
-
-  if (missRoll < MISS_PENALTY_CHANCE) {
-    // Pénalité (-1 par défaut), jamais sous 0
-    const currentStats = (await redis.hgetall(statsKey)) || {};
-    const currentPoints = parseInt(currentStats.points || 0, 10);
-    const appliedDelta = Math.max(POINTS_MISS_PENALTY, -currentPoints);
-    if (appliedDelta !== 0) {
-      await redis.hincrby(statsKey, 'points', appliedDelta);
-      await redis.zincrby('leaderboard', appliedDelta, from);
-    }
-    return res.send(render(pick(messages.missPenalty), { from: fromDisplay, to: toDisplay, points: appliedDelta }));
-  }
-
-  if (missRoll < MISS_PENALTY_CHANCE + MISS_CONSOLATION_CHANCE) {
-    // Consolation (+1 par défaut)
-    await redis.hincrby(statsKey, 'points', POINTS_MISS_CONSOLATION);
-    await redis.zincrby('leaderboard', POINTS_MISS_CONSOLATION, from);
-    return res.send(
-      render(pick(messages.missConsolation), { from: fromDisplay, to: toDisplay, points: POINTS_MISS_CONSOLATION })
-    );
-  }
-
-  // Neutre (0 pt, aucun appel Redis supplémentaire nécessaire)
-  return res.send(render(pick(messages.missNeutral), { from: fromDisplay, to: toDisplay }));
+  const totalDisplay = total > 0 ? `+${total}` : `${total}`;
+  return res.send(
+    render(messages.tripleSummary, { from: fromDisplay, details: lines.join(' | '), total: totalDisplay })
+  );
 });
 
 // ---- !bananestats [ou] !bananecible @pseudo ----

@@ -8,7 +8,7 @@ const { redis } = require('../lib/redis');
 const { clean, render } = require('../lib/utils');
 const { getShopItems } = require('../lib/shop');
 const { getInventory, removeItem, addItem } = require('../lib/inventory');
-const { TRIGGERFYRE_ENABLED, TRIGGERFYRE_PREFIX } = require('../lib/config');
+const { TRIGGERFYRE_ENABLED, TRIGGERFYRE_PREFIX, ITEM_ID_STOP, STUN_DURATION_SECONDS } = require('../lib/config');
 const messages = require('../lib/messages');
 
 const router = express.Router();
@@ -65,6 +65,17 @@ router.get('/api/use', async (req, res) => {
     return res.send(render(messages.useNotUsable, { itemId: req.query.id }));
   }
 
+  // Banane Stop exige une cible AVANT de consommer l'objet, pour ne pas le perdre pour rien.
+  const targetLower = clean(targetDisplay);
+  if (item.id === ITEM_ID_STOP) {
+    if (!targetLower) {
+      return res.send(render(messages.useStopUsage, { user: userDisplay }));
+    }
+    if (targetLower === userLower) {
+      return res.send(render(messages.useStopSelf, { user: userDisplay }));
+    }
+  }
+
   const removed = await removeItem(userLower, item.id, 1);
   if (!removed) {
     return res.send(render(messages.useNotOwned, { user: userDisplay, itemName: item.nom }));
@@ -86,6 +97,11 @@ router.get('/api/use', async (req, res) => {
     await redis.set(itemCooldownKey, '1', { ex: item.cooldownMinutes * 60 });
   }
 
+  // Banane Stop : applique le blocage sur la cible (elle ne peut plus lancer pendant STUN_DURATION_SECONDS).
+  if (item.id === ITEM_ID_STOP) {
+    await redis.set(`stunted:${targetLower}`, '1', { ex: STUN_DURATION_SECONDS });
+  }
+
   // Alerte mise en file d'attente pour l'overlay (voir /alerts), identique à un achat direct
   const alertPayload = {
     id: item.id,
@@ -101,6 +117,13 @@ router.get('/api/use', async (req, res) => {
   await redis.ltrim('alerts:queue', -20, -1);
 
   const triggerCmd = TRIGGERFYRE_ENABLED ? `!${TRIGGERFYRE_PREFIX}${item.id} ` : '';
+
+  if (item.id === ITEM_ID_STOP) {
+    const minutes = Math.ceil(STUN_DURATION_SECONDS / 60);
+    return res.send(
+      triggerCmd + render(messages.useStopSuccess, { user: userDisplay, target: targetDisplay, minutes })
+    );
+  }
   return res.send(triggerCmd + render(messages.useSuccess, { user: userDisplay, itemName: item.nom }));
 });
 
