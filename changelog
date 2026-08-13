@@ -1,11 +1,18 @@
 Changelog
 
-## [0.6.0] - 2026-08-12
+## [0.1.7] - 2026-08-13
+### 🎲 Ajout
+	- Systeme d'inventaire
+### ⚡ Changement 
+	- Restructuration du code.
+	- Correction faille.
+	
+## [0.1.6] - 2026-08-12
 ### ⚡ Changement & Équilibrage 
 	- Restructuration du code.
 	- Cooldown joueur : 45sec -> 30sec
-
-## [0.5.0] - 2026-08-12
+	
+## [0.1.5] - 2026-08-12
 ### 🎲 Ajout
 	- Système de Coup Critique (4%) : Réussite critique (+5 pts) et consolation sur raté (+1 pt).
   - Système d'Échec Critique : Probabilité de pénalité (-1 pt) lors d'un lancer raté.
@@ -27,10 +34,10 @@ Réajustement Prix Boutique :
 	- DBD : No Perk : 150pts -> 300pts
 	- DBD : Tunnel Target : 180pts -> 250pts
 
- ## [0.4.0]
+ ## [0.1.4]
   - Ajustements mineurs de stabilité et corrections d'overlay.
 
- ## [0.3.0]
+ ## [0.1.3]
   - Lancement de la boutique de défis en ligne (`/boutique`).
 
  ## [0.1.0]

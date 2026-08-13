@@ -1,17 +1,19 @@
 const express = require('express');
 
-const usersRoutes = require('../lib/users');
-const gameRoutes = require('../lib/game');
-const shopRoutes = require('../lib/shop-routes');
-const leaderboardRoutes = require('../lib/leaderboard');
+const bananeRoutes = require('../routes/banane');
+const shopRoutes = require('../routes/shop');
+const inventoryRoutes = require('../routes/inventory');
+const leaderboardRoutes = require('../routes/leaderboard');
+const alertsRoutes = require('../routes/alerts');
 
 const app = express();
 
 // ---- Montage des différents modules de routes ----
-app.use(usersRoutes.router);       // /api/debug-watchtime
-app.use(gameRoutes.router);        // /api/banane, /api/bananestats, /api/bananepoints, /api/topbanane, /api/banane-add
+app.use(bananeRoutes.router);      // /api/banane, /api/bananestats, /api/bananepoints, /api/topbanane, /api/banane-add, /api/debug-watchtime
 app.use(shopRoutes.router);        // /api/buy, /api/shop, /boutique
-app.use(leaderboardRoutes.router); // /api/leaderboard, /classement, /api/alerts/pop, /alerts
+app.use(inventoryRoutes.router);   // /api/inventaire, /api/use
+app.use(leaderboardRoutes.router); // /api/leaderboard, /classement
+app.use(alertsRoutes.router);      // /api/alerts/pop, /alerts
 
 // ---- Routes racine ----
 app.get('/api', (req, res) => res.send('Twitch Banane Game API — OK'));
