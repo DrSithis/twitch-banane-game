@@ -5,10 +5,11 @@
 
 const express = require('express');
 const { redis } = require('../lib/redis');
-const { clean } = require('../lib/utils');
+const { clean, render } = require('../lib/utils');
 const { getShopItems } = require('../lib/shop');
 const { getInventory, removeItem, addItem } = require('../lib/inventory');
 const { TRIGGERFYRE_ENABLED, TRIGGERFYRE_PREFIX } = require('../lib/config');
+const messages = require('../lib/messages');
 
 const router = express.Router();
 
@@ -16,13 +17,13 @@ const router = express.Router();
 router.get('/api/inventaire', async (req, res) => {
   const userLower = clean(req.query.user);
   const userDisplay = req.query.user || userLower;
-  if (!userLower) return res.send('Utilisation : !banane_inventaire');
+  if (!userLower) return res.send(messages.usageInventaire);
 
   const inv = await getInventory(userLower);
   const entries = Object.entries(inv).filter(([, qty]) => parseInt(qty, 10) > 0);
 
   if (!entries.length) {
-    return res.send(`🎒 ${userDisplay}, ton inventaire est vide. Achète des objets stockables sur /boutique !`);
+    return res.send(render(messages.inventaireEmpty, { user: userDisplay }));
   }
 
   let items = [];
@@ -38,7 +39,7 @@ router.get('/api/inventaire', async (req, res) => {
     return `${name} x${qty}`;
   });
 
-  return res.send(`🎒 Inventaire de ${userDisplay} : ${parts.join(' | ')}`);
+  return res.send(render(messages.inventaireList, { user: userDisplay, items: parts.join(' | ') }));
 });
 
 // ---- !banane_use <id> [@cible] : active un objet stocké dans l'inventaire ----
@@ -49,24 +50,24 @@ router.get('/api/use', async (req, res) => {
   const targetDisplay = req.query.target || '';
 
   if (!userLower || !itemId) {
-    return res.send('Utilisation : !banane_use <id_objet> [@cible]');
+    return res.send(messages.usageUse);
   }
 
   let items;
   try {
     items = await getShopItems(redis);
   } catch (e) {
-    return res.send('🍌 La boutique est momentanément indisponible, réessaie dans une minute.');
+    return res.send(messages.shopUnavailable);
   }
 
   const item = items.find((it) => it.id.toLowerCase() === itemId);
   if (!item || !item.estInventaire) {
-    return res.send(`🎒 "${req.query.id}" n'est pas un objet utilisable depuis l'inventaire.`);
+    return res.send(render(messages.useNotUsable, { itemId: req.query.id }));
   }
 
   const removed = await removeItem(userLower, item.id, 1);
   if (!removed) {
-    return res.send(`🎒 ${userDisplay}, tu n'as pas "${item.nom}" dans ton inventaire. Achète-le sur /boutique !`);
+    return res.send(render(messages.useNotOwned, { user: userDisplay, itemName: item.nom }));
   }
 
   // Cooldown propre à CET objet, appliqué au moment de l'ACTIVATION (pas de l'achat)
@@ -78,7 +79,9 @@ router.get('/api/use', async (req, res) => {
       const ttlDisplay = ttl > 0 ? ttl : item.cooldownMinutes * 60;
       // L'activation est refusée : on rend l'objet au joueur, il ne doit pas le perdre pour rien.
       await addItem(userLower, item.id, 1);
-      return res.send(`🍌 "${item.nom}" vient d'être utilisé, réessaie dans ${Math.ceil(ttlDisplay / 60)} min.`);
+      return res.send(
+        render(messages.useOnCooldown, { itemName: item.nom, minutes: Math.ceil(ttlDisplay / 60) })
+      );
     }
     await redis.set(itemCooldownKey, '1', { ex: item.cooldownMinutes * 60 });
   }
@@ -98,7 +101,7 @@ router.get('/api/use', async (req, res) => {
   await redis.ltrim('alerts:queue', -20, -1);
 
   const triggerCmd = TRIGGERFYRE_ENABLED ? `!${TRIGGERFYRE_PREFIX}${item.id} ` : '';
-  return res.send(`${triggerCmd}🎒 ${userDisplay} active "${item.nom}" depuis son inventaire !`);
+  return res.send(triggerCmd + render(messages.useSuccess, { user: userDisplay, itemName: item.nom }));
 });
 
 module.exports = { router };
