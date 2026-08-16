@@ -89,64 +89,8 @@
 
   </div>
 
-  <script>
-    (function () {
-      // Le pseudo est le dernier segment de l'URL : /profil/DrSithis -> "DrSithis"
-      const pathParts = window.location.pathname.split('/').filter(Boolean);
-      const username = decodeURIComponent(pathParts[pathParts.length - 1] || '');
-
-      if (!username) {
-        document.getElementById('player-name').textContent = 'Aucun joueur spécifié';
-        return;
-      }
-
-      document.title = 'Profil de ' + username + ' - DrSithis Twitch Banane Game';
-
-      // Avatar : servi par notre propre API (/api/profile/...), qui va chercher l'URL réelle
-      // côté serveur via decapi.me — decapi renvoie du texte, pas une image, donc on ne peut
-      // pas l'utiliser directement en src="". On garde l'avatar par défaut en attendant la réponse.
-      const avatarImg = document.getElementById('player-avatar');
-      const defaultAvatar = 'https://static-cdn.jtvnw.net/user-default-pictures-uv/998f01ae-def8-11e9-b95c-784f43822e80-profile_image-70x70.png';
-      avatarImg.src = defaultAvatar;
-      avatarImg.onerror = function () {
-        avatarImg.onerror = null;
-        avatarImg.src = defaultAvatar;
-      };
-
-      fetch('/api/profile/' + encodeURIComponent(username))
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          document.getElementById('player-name').textContent = data.displayName;
-          document.getElementById('player-rank').textContent = data.rank
-            ? '🏆 Rang #' + data.rank
-            : '🏆 Non classé';
-          document.getElementById('player-points').textContent = '💰 ' + data.points + ' pts';
-
-          if (data.avatarUrl) {
-            avatarImg.src = data.avatarUrl;
-          }
-
-          document.getElementById('stat-shots').textContent = data.throws;
-          document.getElementById('stat-misses').textContent = data.misses;
-          document.getElementById('stat-accuracy').textContent = data.accuracy + '%';
-          document.getElementById('stat-favorite-target').textContent = data.favoriteTarget || 'Aucune';
-
-          const invEl = document.getElementById('inventory-list');
-          if (!data.inventory.length) {
-            invEl.innerHTML = '<p class="empty-inventory">Le sac à dos est vide.</p>';
-          } else {
-            invEl.innerHTML = data.inventory
-              .map(function (it) {
-                return '<div class="inventory-item"><span>' + it.name +
-                  '</span><span class="item-count">x' + it.qty + '</span></div>';
-              })
-              .join('');
-          }
-        })
-        .catch(function () {
-          document.getElementById('player-name').textContent = 'Erreur de chargement du profil';
-        });
-    })();
-  </script>
+  <footer style="text-align: center; margin-top: 30px; padding: 15px; font-size: 0.9em; opacity: 0.8;">
+    <a href="./changelog.html" style="color: inherit; text-decoration: underline;">Changelog</a>
+  </footer>
 </body>
 </html>
