@@ -9,6 +9,7 @@ const messages = require('../lib/messages');
 const { clean, render } = require('../lib/utils');
 const { getInventory } = require('../lib/inventory');
 const { getShopItems } = require('../lib/shop');
+const { getTwitchAvatar } = require('../lib/users');
 
 const router = express.Router();
 
@@ -19,10 +20,12 @@ router.get('/api/profile/:username', async (req, res) => {
     return res.status(400).json({ error: 'Pseudo manquant' });
   }
 
-  const [stats, displayName, rankIndex] = await Promise.all([
+  const [stats, displayName, rankIndex, topTargets, avatarUrl] = await Promise.all([
     redis.hgetall(`stats:${usernameLower}`),
     redis.get(`displayname:${usernameLower}`),
     redis.zrevrank('leaderboard', usernameLower),
+    redis.zrange(`targets:${usernameLower}`, 0, 0, { rev: true }),
+    getTwitchAvatar(usernameLower),
   ]);
 
   const throwsCount = parseInt((stats && stats.throws) || 0, 10);
@@ -31,6 +34,11 @@ router.get('/api/profile/:username', async (req, res) => {
   const points = parseInt((stats && stats.points) || 0, 10);
   const misses = Math.max(throwsCount - hits, 0);
   const critRate = throwsCount ? Math.round((crits / throwsCount) * 100) : 0;
+  const accuracy = throwsCount ? Math.round((hits / throwsCount) * 100) : 0;
+
+  // Cible favorite : même logique que !bananestats (routes/banane.js).
+  const favTargetLower = topTargets && topTargets.length ? topTargets[0] : null;
+  const favoriteTarget = favTargetLower ? (await redis.get(`displayname:${favTargetLower}`)) || favTargetLower : null;
 
   let items = [];
   try {
@@ -57,6 +65,9 @@ router.get('/api/profile/:username', async (req, res) => {
     crits,
     misses,
     critRate,
+    accuracy,
+    favoriteTarget,
+    avatarUrl,
     inventory,
   });
 });

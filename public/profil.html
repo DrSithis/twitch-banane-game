@@ -52,8 +52,7 @@
       <hr class="separator">
 
       <!-- Statistiques RPG -->
-     <!-- Statistiques RPG -->
-      <<!-- Statistiques RPG -->
+      <!-- Statistiques RPG -->
       <div class="profile-section">
         <h2>📊 Statistiques du Joueur</h2>
         <div class="stats-grid">
@@ -103,13 +102,15 @@
 
       document.title = 'Profil de ' + username + ' - DrSithis Twitch Banane Game';
 
-      // Avatar récupéré via un service tiers non-officiel (decapi.me), pas besoin de clé API Twitch.
-      // Si le service est indisponible ou le pseudo introuvable, on retombe sur l'avatar par défaut.
+      // Avatar : servi par notre propre API (/api/profile/...), qui va chercher l'URL réelle
+      // côté serveur via decapi.me — decapi renvoie du texte, pas une image, donc on ne peut
+      // pas l'utiliser directement en src="". On garde l'avatar par défaut en attendant la réponse.
       const avatarImg = document.getElementById('player-avatar');
-      avatarImg.src = 'https://decapi.me/twitch/avatar/' + encodeURIComponent(username);
+      const defaultAvatar = 'https://static-cdn.jtvnw.net/user-default-pictures-uv/998f01ae-def8-11e9-b95c-784f43822e80-profile_image-70x70.png';
+      avatarImg.src = defaultAvatar;
       avatarImg.onerror = function () {
         avatarImg.onerror = null;
-        avatarImg.src = 'https://static-cdn.jtvnw.net/user-default-pictures-uv/998f01ae-def8-11e9-b95c-784f43822e80-profile_image-70x70.png';
+        avatarImg.src = defaultAvatar;
       };
 
       fetch('/api/profile/' + encodeURIComponent(username))
@@ -121,10 +122,14 @@
             : '🏆 Non classé';
           document.getElementById('player-points').textContent = '💰 ' + data.points + ' pts';
 
+          if (data.avatarUrl) {
+            avatarImg.src = data.avatarUrl;
+          }
+
           document.getElementById('stat-shots').textContent = data.throws;
-          document.getElementById('stat-crits').textContent = data.crits;
           document.getElementById('stat-misses').textContent = data.misses;
-          document.getElementById('stat-accuracy').textContent = data.critRate + '%';
+          document.getElementById('stat-accuracy').textContent = data.accuracy + '%';
+          document.getElementById('stat-favorite-target').textContent = data.favoriteTarget || 'Aucune';
 
           const invEl = document.getElementById('inventory-list');
           if (!data.inventory.length) {
