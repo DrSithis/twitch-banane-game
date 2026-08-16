@@ -50,7 +50,7 @@ router.get('/classement', async (req, res) => {
       return `
         <tr>
           <td class="rank">${rankIcon}</td>
-          <td class="name">${escapeHtml(r.username)}</td>
+          <td class="name"><a href="/profil/${encodeURIComponent(r.username)}" class="player-link">${escapeHtml(r.username)}</a></td>
           <td class="points">${r.points} pts</td>
           <td>${r.throws}</td>
           <td>${r.hits}</td>

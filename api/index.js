@@ -6,6 +6,7 @@ const shopRoutes = require('../routes/shop');
 const inventoryRoutes = require('../routes/inventory');
 const leaderboardRoutes = require('../routes/leaderboard');
 const alertsRoutes = require('../routes/alerts');
+const profileRoutes = require('../routes/profile');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(shopRoutes.router);        // /api/buy, /api/shop, /boutique
 app.use(inventoryRoutes.router);   // /api/inventaire, /api/use
 app.use(leaderboardRoutes.router); // /api/leaderboard, /classement
 app.use(alertsRoutes.router);      // /api/alerts/pop, /alerts
+app.use(profileRoutes.router);     // /profil/:username, /api/profile/:username, /api/profile-link
 
 // ---- Routes racine ----
 app.get('/api', (req, res) => res.send('Twitch Banane Game API — OK'));

@@ -292,3 +292,172 @@ td.points {
   color: #888780;
   font-size: 0.8rem;
 }
+
+/* ==========================================
+   CARTE DE PROFIL RPG
+   ========================================== */
+
+/* Carte principale du joueur */
+.profile-card {
+  background: #18181b;
+  border: 2px solid #a855f7; /* Contour violet */
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  margin-top: 10px;
+}
+
+/* En-tête : Avatar + Titres */
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.profile-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 3px solid #eab308; /* Cercle jaune */
+  object-fit: cover;
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.3);
+}
+
+.profile-username {
+  font-size: 2rem;
+  margin: 0 0 8px 0;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+/* Badges Rang & Points */
+.profile-badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.badge-rank {
+  background: #27272a;
+  color: #eab308;
+  border: 1px solid #3f3f46;
+}
+
+.badge-points {
+  background: #a855f7;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+}
+
+/* Séparateurs */
+.separator {
+  border: 0;
+  height: 1px;
+  background: #27272a;
+  margin: 24px 0;
+}
+
+.profile-section h2 {
+  font-size: 1.2rem;
+  color: #f4f4f5;
+  margin-bottom: 16px;
+}
+
+/* Grille des statistiques RPG */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 15px;
+}
+
+.stat-box {
+  background: #09090b;
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  border: 1px solid #27272a;
+  transition: transform 0.2s ease;
+}
+
+.stat-box:hover {
+  transform: translateY(-2px);
+  border-color: #3f3f46;
+}
+
+.stat-number {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #eab308;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #a1a1aa;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Grille du Sac à dos / Inventaire */
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.inventory-item {
+  background: #27272a;
+  padding: 12px 16px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-left: 4px solid #a855f7;
+  font-weight: 600;
+  color: #f4f4f5;
+}
+
+.item-count {
+  background: #a855f7;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.empty-inventory {
+  color: #71717a;
+  font-style: italic;
+  grid-column: 1 / -1;
+}
+
+/* Adaptabilité Mobile */
+@media (max-width: 600px) {
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .profile-badges {
+    justify-content: center;
+  }
+}
+/* Lien cliquable sur les pseudos du classement, vers /profil/:username */
+.player-link {
+  color: inherit;
+  text-decoration: none;
+}
+.player-link:hover {
+  color: #ffe135;
+  text-decoration: underline;
+}

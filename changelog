@@ -1,24 +1,32 @@
 Changelog
 
-## [0.1.7.2] - 2026-08-13
+## [0.1.7.3]
+### 🎲 Ajout
+	- Page de profil.
+	- Profil de n'importe quel joueur accecible via un click sur son nom sur la page du classement.
+### ⚡ Changement 
+	- Banane Triple : 50pts -> 7pts
+	- Banane Stop : 75pts -> 20pts
+	
+## [0.1.7.2]
 ### 🎲 Ajout
 	- Objet triple banane & stop banane
 ### ⚡ Changement 
 	- Changement comportement du lancer.
 	
-## [0.1.7] - 2026-08-13
+## [0.1.7]
 ### 🎲 Ajout
 	- Systeme d'inventaire
 ### ⚡ Changement 
 	- Restructuration du code.
 	- Correction faille.
 	
-## [0.1.6] - 2026-08-12
+## [0.1.6]
 ### ⚡ Changement & Équilibrage 
 	- Restructuration du code.
 	- Cooldown joueur : 45sec -> 30sec
 	
-## [0.1.5] - 2026-08-12
+## [0.1.5]
 ### 🎲 Ajout
 	- Système de Coup Critique (4%) : Réussite critique (+5 pts) et consolation sur raté (+1 pt).
   - Système d'Échec Critique : Probabilité de pénalité (-1 pt) lors d'un lancer raté.

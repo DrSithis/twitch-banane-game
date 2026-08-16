@@ -66,6 +66,7 @@ async function resolveThrow(fromLower, toLower, watchMinutes) {
   if (success) {
     const earnedPoints = isCritical ? POINTS_CRITICAL : POINTS_CLASSIC;
     await redis.hincrby(statsKey, 'hits', 1);
+    if (isCritical) await redis.hincrby(statsKey, 'crits', 1);
     await redis.hincrby(statsKey, 'points', earnedPoints);
     await redis.hincrby(targetedKey, 'hits', 1);
     await redis.zincrby('leaderboard', earnedPoints, fromLower);
