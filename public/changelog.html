@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog - DrSithis Twitch Banane Game</title>
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    .changelog-box {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 25px;
+      margin-top: 20px;
+      white-space: pre-wrap; /* Conserve la mise en page du texte texte brut */
+      font-family: 'Courier New', Courier, monospace; /* Style console/code très propre */
+      line-height: 1.6;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <img src="https://i.imgur.com/ksTm9Tt.png" alt="DrSithis Logo" class="logo">
+
+      <!-- Navigation -->
+      <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+        <a href="/" class="btn-nav">🏠 Accueil</a>
+        <a href="/classement" class="btn-nav">🏆 Classement</a>
+        <a href="/boutique" class="btn-nav">🛒 Boutique</a>
+      </div>
+    </div>
+
+    <div class="profile-card">
+      <h2>📜 Journal des Mises à Jour (Changelog)</h2>
+      
+      <div id="changelog-content" class="changelog-box">Chargement du changelog...</div>
+    </div>
+  </div>
+
+  <script>
+    // Lien Brut (Raw) du fichier GitHub
+    const rawGithubUrl = 'https://raw.githubusercontent.com/DrSithis/twitch-banane-game/main/changelog';
+
+    fetch(rawGithubUrl)
+      .then(response => {
+        if (!response.ok) throw new Error('Impossible de charger le changelog');
+        return response.text();
+      })
+      .then(data => {
+        document.getElementById('changelog-content').textContent = data;
+      })
+      .catch(err => {
+        document.getElementById('changelog-content').textContent = 'Erreur lors du chargement des mises à jour.';
+      });
+  </script>
+
+</body>
+</html>
