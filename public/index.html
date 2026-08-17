@@ -4,32 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Twitch Banane Game - Accueil</title>
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <div class="container">
 
-    <!-- Header & Logo -->
-    <header class="header">
-      <img src="https://github.com/DrSithis.png" alt="Logo DrSithis" class="logo">
-      <h1>🍌 Twitch Banane Game</h1>
-      <p class="subtitle">Le jeu de tout les macaques du stream ! LANCE, ACCUMULE, RÉCOMPENSE.</p>
-    </header>
-
-    <!-- Réseaux Sociaux -->
-    <div class="social-links">
-      <a href="https://www.twitch.tv/drsithis" target="_blank" class="btn-social btn-twitch">👾 Twitch</a>
-      <a href="https://discord.com/invite/6rWMXX2g" target="_blank" class="btn-social btn-discord">💬 Discord</a>
-      <a href="https://www.tiktok.com/@drsithis" target="_blank" class="btn-social btn-tiktok">🎵 TikTok</a>
-      <a href="https://www.youtube.com/@DrSithis" target="_blank" class="btn-social btn-youtube">▶️ YouTube</a>
-      <a href="https://www.youtube.com/@DrSithisRediffusion" target="_blank" class="btn-social btn-youtube-rediff">🔴 Rediffs</a>
-    </div>
-
-    <!-- Navigation principale -->
-    <nav class="nav-links">
-      <a href="/boutique" class="btn-nav">🛒 Boutique de défis</a>
-      <a href="/classement" class="btn-nav">🏆 Classement Général</a>
-    </nav>
+    {{HEADER}}
 
     <!-- Règle de base -->
     <div class="instructions">
@@ -121,7 +101,7 @@
           <p class="reward-desc">Donne le lien direct vers le catalogue de la boutique.</p>
           <div class="reward-footer"> <code class="reward-id">!bsh</code> </div>
         </div>
-        
+
         <div class="reward-card">
           <div class="reward-header">
             <span class="reward-name">📊 Profile du joueur</span>
@@ -140,21 +120,10 @@
           <div class="reward-footer"> <code class="reward-id">!bh</code> </div>
         </div>
 
-        <!--<div class="reward-card">
-          <div class="reward-header">
-            <span class="reward-name">🐒 Mandater les macaques</span>
-            <span class="reward-price">!macaque</span>
-          </div>
-          <p class="reward-desc">Commande fun spéciale pour envoyer la troupe sur une cible ! <code>!macaque &lt;pseudo&gt;</code>.</p>
-        </div>-->
-
       </div>
     </div>
 
   </div>
-  <footer style="text-align: center; margin-top: 30px; padding: 15px; font-size: 0.9em; opacity: 0.8;">
-    <a href="./changelog.html" style="color: inherit; text-decoration: underline;">Changelog</a>
-  </footer>
-  
+  {{FOOTER}}
 </body>
 </html>

@@ -7,10 +7,15 @@ const inventoryRoutes = require('../routes/inventory');
 const leaderboardRoutes = require('../routes/leaderboard');
 const alertsRoutes = require('../routes/alerts');
 const profileRoutes = require('../routes/profile');
+const pagesRoutes = require('../routes/pages');
 
 const app = express();
 
-// ---- Fichiers statiques ----
+// ---- Pages HTML dynamiques (doivent passer AVANT express.static, sinon Express
+// servirait directement le fichier brut non-templaté pour "/") ----
+app.use(pagesRoutes.router);       // /, /changelog
+
+// ---- Fichiers statiques (CSS, logo, partials...) ----
 app.use(express.static(path.join(__dirname, '../public')));
 
 // ---- Montage des différents modules de routes ----
@@ -23,6 +28,5 @@ app.use(profileRoutes.router);     // /profil/:username, /api/profile/:username,
 
 // ---- Routes racine ----
 app.get('/api', (req, res) => res.send('Twitch Banane Game API — OK'));
-app.get('/', (req, res) => {res.sendFile(path.join(__dirname, '../public/index.html'));});
 
 module.exports = app;

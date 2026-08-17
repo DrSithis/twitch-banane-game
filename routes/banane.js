@@ -9,6 +9,7 @@ const messages = require('../lib/messages');
 const { clean, pick, render } = require('../lib/utils');
 const { ensureUser, getWatchtimeMinutes } = require('../lib/users');
 const { addItem, removeItem } = require('../lib/inventory');
+const { setManualRole, VALID_ROLES } = require('../lib/roles');
 const {
   CHANCE_BASE,
   CHANCE_MAX,
@@ -362,6 +363,52 @@ router.get('/api/banane-add', async (req, res) => {
   const newScore = await redis.zincrby('leaderboard', pointsToAdd, cleanTarget);
 
   return res.send(`🍌 @${user} a donné ${pointsToAdd} points à @${cleanTarget} ! (Nouveau solde : ${newScore} pts)`);
+});
+
+// ---- Commande pour attribuer/retirer un badge VIP, Abonné ou Modérateur ----
+// Le streamer peut tout faire. Les modérateurs peuvent gérer VIP et Abonné,
+// mais pas le badge "mod" lui-même (évite qu'un modo puisse en promouvoir/rétrograder d'autres).
+router.get('/api/banane-role', async (req, res) => {
+  const { user, target, role } = req.query;
+  const userLower = user ? user.toLowerCase() : '';
+
+  const isStreamer = userLower === TROLL_TARGET;
+  const isMod = !isStreamer && userLower && (await redis.get(`role:${userLower}`)) === 'mod';
+
+  if (!isStreamer && !isMod) {
+    return res.send(`⛔ Seuls ${TROLL_TARGET} et les modérateurs peuvent gérer les rôles !`);
+  }
+
+  if (!target || !role) {
+    return res.send('⚠️ Usage : !banane_role @pseudo <mod|vip|sub|aucun>');
+  }
+
+  const cleanTarget = clean(target);
+  const roleLower = role.toString().toLowerCase();
+
+  if (roleLower === 'aucun' || roleLower === 'none' || roleLower === 'retirer') {
+    if (!isStreamer) {
+      const currentRole = await redis.get(`role:${cleanTarget}`);
+      if (currentRole === 'mod') {
+        return res.send(`⛔ Seul ${TROLL_TARGET} peut retirer le badge Modérateur.`);
+      }
+    }
+    await setManualRole(cleanTarget, null);
+    return res.send(`🍌 Rôle retiré pour @${cleanTarget}.`);
+  }
+
+  if (!VALID_ROLES.includes(roleLower)) {
+    return res.send('⚠️ Rôle invalide. Utilise : mod, vip, sub, ou aucun.');
+  }
+
+  if (roleLower === 'mod' && !isStreamer) {
+    return res.send(`⛔ Seul ${TROLL_TARGET} peut attribuer le badge Modérateur.`);
+  }
+
+  await ensureUser(cleanTarget, target.replace('@', ''));
+  await setManualRole(cleanTarget, roleLower);
+  const roleLabels = { mod: 'Modérateur 🛡️', vip: 'VIP 💎', sub: 'Abonné ⭐' };
+  return res.send(`🍌 @${cleanTarget} porte maintenant le badge ${roleLabels[roleLower]} !`);
 });
 
 module.exports = { router };

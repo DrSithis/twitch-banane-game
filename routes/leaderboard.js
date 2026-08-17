@@ -5,7 +5,7 @@
 const express = require('express');
 const { redis } = require('../lib/redis');
 const { escapeHtml } = require('../lib/utils');
-const { renderTemplate } = require('../lib/html');
+const { renderPage } = require('../lib/html');
 
 const router = express.Router();
 
@@ -69,7 +69,11 @@ router.get('/classement', async (req, res) => {
     : `<div class="empty">Aucun lancer de banane enregistré pour le moment.</div>`;
 
   try {
-    const html = renderTemplate('classement.html', { COUNT: rows.length, CONTENT: tableContent });
+    const html = renderPage('classement.html', {
+      TITLE: '🍌 Classement Jeu Banane 🍌',
+      SUBTITLE: `Top ${rows.length} lanceurs`,
+      CONTENT: tableContent,
+    });
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(html);
   } catch (err) {

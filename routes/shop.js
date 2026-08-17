@@ -9,7 +9,7 @@ const { redis } = require('../lib/redis');
 const { getShopItems } = require('../lib/shop');
 const { addItem } = require('../lib/inventory');
 const { clean, escapeHtml } = require('../lib/utils');
-const { renderTemplate } = require('../lib/html');
+const { renderPage } = require('../lib/html');
 const { ensureUser } = require('../lib/users');
 const { TRIGGERFYRE_ENABLED, TRIGGERFYRE_PREFIX } = require('../lib/config');
 
@@ -166,7 +166,11 @@ router.get('/boutique', async (req, res) => {
     : `<div class="empty">Aucune récompense disponible pour le moment.</div>`;
 
   try {
-    const html = renderTemplate('boutique.html', { COUNT: items.length, CONTENT: contentHtml });
+    const html = renderPage('boutique.html', {
+      TITLE: '🍌 Boutique Jeu Banane 🍌',
+      SUBTITLE: `<span class="count">${items.length}</span> défis disponibles`,
+      CONTENT: contentHtml,
+    });
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(html);
   } catch (err) {

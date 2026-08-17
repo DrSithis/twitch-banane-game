@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Changelog - DrSithis Twitch Banane Game</title>
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="/style.css">
   <style>
     .changelog-box {
       background: rgba(0, 0, 0, 0.4);
@@ -23,23 +23,16 @@
 <body>
 
   <div class="container">
-    <div class="header">
-      <img src="https://i.imgur.com/ksTm9Tt.png" alt="DrSithis Logo" class="logo">
-
-      <!-- Navigation -->
-      <div style="margin-bottom: 20px; display: flex; gap: 10px;">
-        <a href="/" class="btn-nav">🏠 Accueil</a>
-        <a href="/classement" class="btn-nav">🏆 Classement</a>
-        <a href="/boutique" class="btn-nav">🛒 Boutique</a>
-      </div>
-    </div>
+    {{HEADER}}
 
     <div class="profile-card">
       <h2>📜 Journal des Mises à Jour (Changelog)</h2>
-      
+
       <div id="changelog-content" class="changelog-box">Chargement du changelog...</div>
     </div>
   </div>
+
+  {{FOOTER}}
 
   <script>
     // Lien Brut (Raw) du fichier GitHub

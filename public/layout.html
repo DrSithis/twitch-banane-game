@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>{{PAGE_TITLE}}</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header global commun -->
+    <div class="header">
+      <img src="https://i.imgur.com/ksTm9Tt.png" alt="DrSithis Logo" class="logo">
+      
+      <!-- Titre et sous-titre dynamiques -->
+      <h1>{{TITLE}}</h1>
+      <div class="subtitle">{{SUBTITLE}}</div>
+
+      <!-- Réseaux Sociaux -->
+      <div class="social-links">
+        <a href="https://www.twitch.tv/drsithis" target="_blank" class="btn-social btn-twitch">👾 Twitch</a>
+        <a href="https://discord.com/invite/6rWMXX2g" target="_blank" class="btn-social btn-discord">💬 Discord</a>
+        <a href="https://www.tiktok.com/@drsithis" target="_blank" class="btn-social btn-tiktok">🎵 TikTok</a>
+        <a href="https://www.youtube.com/@DrSithis" target="_blank" class="btn-social btn-youtube">▶️ YouTube</a>
+        <a href="https://www.youtube.com/@DrSithisRediffusion" target="_blank" class="btn-social btn-youtube-rediff">🔴 Rediffs</a>
+      </div>
+
+      <!-- Boutons de Navigation -->
+      <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+        <a href="/" class="btn-nav">🏠 Accueil</a>
+        <a href="/classement" class="btn-nav">🏆 Classement</a>
+        <a href="/boutique" class="btn-nav">🛒 Boutique</a>
+      </div>
+    </div>
+
+    <!-- Contenu spécifique injecté pour chaque page -->
+    {{CONTENT}}
+
+	<footer style="text-align: center; margin-top: 30px; padding: 15px; font-size: 0.9em; opacity: 0.8;">
+		<a href="./changelog.html" style="color: inherit; text-decoration: underline;">Changelog</a>
+	</footer>
+  </div>
+
+</body>
+</html>
