@@ -16,6 +16,7 @@ Mini jeu de lancée de banane pour le Stream de DrSithis. Lance des bananes, ré
 - | `!banane_stat` | `!banane_stat` | Affiche ses statistiques de tirs et victoires. |
 - | `!banane_top` | `!banane_top` | Affiche le joueur actuellement en tête. |
 - | `!banane_lb` | `!banane_lb` | Affiche le lien vers le classement complet. |
+- | `!banane_profile` | `!banane_profile` | Affiche votre profil de joueur. |
 
 ## Liens 
 [![Twitch](https://img.shields.io/badge/Twitch-DrSithis-9146FF?style=for-the-badge&logo=twitch&logoColor=white)](https://www.twitch.tv/drsithis)
