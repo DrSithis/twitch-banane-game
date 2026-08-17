@@ -18,6 +18,9 @@ Mini jeu de lancée de banane pour le Stream de DrSithis. Lance des bananes, ré
 - | `!banane_lb` | `!banane_lb` | Affiche le lien vers le classement complet. |
 - | `!banane_profile` | `!banane_profile` | Affiche votre profil de joueur. |
 
+## 🎮 Commandes Admin
+- | `!banane_role` | `!banane_role @joueur role` | Attribue le role au joueur. [sub, vip, mod] |
+
 ## Liens 
 [![Twitch](https://img.shields.io/badge/Twitch-DrSithis-9146FF?style=for-the-badge&logo=twitch&logoColor=white)](https://www.twitch.tv/drsithis)
 [![Discord](https://img.shields.io/badge/Discord-Rejoins_nous-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/6rWMXX2g)
